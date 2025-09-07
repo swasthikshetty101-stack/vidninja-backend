@@ -1,0 +1,73 @@
+# Koyeb deployment configuration
+# This file configures your backend for optimal video streaming performance
+
+app:
+  name: providerv-backend
+  
+services:
+  - name: video-streaming-backend
+    type: web
+    
+    # Build configuration
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    # Runtime configuration  
+    ports:
+      - port: 3001
+        protocol: http
+        
+    # Environment variables
+    env:
+      - name: NODE_ENV
+        value: production
+      - name: PORT
+        value: "3001"
+      - name: CORS_ORIGIN
+        value: "*"  # Update with your frontend domain
+      - name: PROXY_TIMEOUT
+        value: "180000"  # 3 minutes for video streaming
+      - name: TMDB_API_KEY
+        value: "9ea1aff13026f8babc7846fca3edfce7"  # Your TMDB key
+      - name: PROXY_URL
+        value: "https://75b009d6.simple-proxy-bypass.pages.dev"  # Your Cloudflare proxy
+        
+    # Instance configuration - optimized for video streaming
+    instance:
+      type: small  # Start with small, can scale up based on usage
+      
+    # Regions - deploy to multiple regions for better performance
+    regions:
+      - was  # Washington DC (US East)
+      - fra  # Frankfurt (EU)
+      
+    # Health check
+    health_check:
+      http:
+        path: /health
+        port: 3001
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      
+    # Auto-scaling for video streaming load
+    autoscaling:
+      min_scale: 1
+      max_scale: 5
+      targets:
+        - type: cpu
+          value: 70  # Scale when CPU usage > 70%
+        - type: memory
+          value: 80  # Scale when memory usage > 80%
+          
+    # Resource limits
+    resources:
+      memory: 512Mi  # 512MB RAM - good for video proxy operations
+      cpu: 0.5       # 0.5 vCPU
+      
+# Domain configuration (optional)
+domains:
+  - name: your-custom-domain.com  # Replace with your domain
+    service: video-streaming-backend
+    port: 3001
