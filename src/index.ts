@@ -3,10 +3,10 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getConfig } from './config/index';
-import { ProviderService } from './services/ProviderService';
-import { TMDBService } from './services/TMDBService';
-import { createProviderRoutes } from './routes/providers';
+import { getConfig } from './config/index.js';
+import { ProviderService } from './services/ProviderService.js';
+import { TMDBService } from './services/TMDBService.js';
+import { createProviderRoutes } from './routes/providers.js';
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);

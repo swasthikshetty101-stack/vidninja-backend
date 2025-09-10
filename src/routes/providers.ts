@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { ProviderService } from '../services/ProviderService';
-import { TMDBService } from '../services/TMDBService';
-import { decodePayload, streamProxy } from './payload';
+import { ProviderService } from '../services/ProviderService.js';
+import { TMDBService } from '../services/TMDBService.js';
+import { decodePayload, streamProxy } from './payload.js';
 
 export function createProviderRoutes(providerService: ProviderService, tmdbService: TMDBService): Router {
   const router = Router();

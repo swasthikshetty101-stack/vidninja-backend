@@ -14,7 +14,7 @@ import {
   HlsBasedStream,
   FileBasedStream
 } from '../../lib/index.js';
-import { Config } from '../config';
+import { Config } from '../config/index.js';
 
 export interface MediaInfo {
   type: 'movie' | 'show';

@@ -1,5 +1,5 @@
-import { Config } from '../config';
-import { MediaInfo } from './ProviderService';
+import { Config } from '../config/index.js';
+import { MediaInfo } from './ProviderService.js';
 
 export interface TMDBSearchResult {
   id: number;
