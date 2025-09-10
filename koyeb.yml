@@ -33,7 +33,7 @@ services:
       - name: PROXY_URL
         value: "https://75b009d6.simple-proxy-bypass.pages.dev"  # Your Cloudflare proxy
       - name: BACKEND_URL
-        value: "https://important-candide-vidninja-84a3a384.koyeb.app"  # Backend URL for stream proxying
+        value: "https://cdn.vidninja.pro"  # Backend URL for stream proxying
         
     # Instance configuration - optimized for video streaming
     instance:

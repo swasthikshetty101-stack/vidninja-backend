@@ -39,8 +39,8 @@ export function getConfig(): Config {
   const nodeEnv = process.env.NODE_ENV || 'development';
 
   // Backend URL for stream proxy URLs (auto-detect from environment)
-  const backendUrl = process.env.BACKEND_URL || process.env.KOYEB_APP_URL || 
-    'https://important-candide-vidninja-84a3a384.koyeb.app'; // Always fallback to Koyeb URL
+  const backendUrl = process.env.BACKEND_URL || process.env.KOYEB_APP_URL ||
+    'https://cdn.vidninja.pro'; // Always fallback to your custom domain
 
   console.log('🔧 Backend Configuration:');
   console.log(`   📋 Port: ${port}`);
@@ -50,7 +50,9 @@ export function getConfig(): Config {
   console.log(`   🔨 Environment: ${nodeEnv}`);
   console.log(`   🏠 Backend URL: ${backendUrl}`);
   console.log(`   🔍 BACKEND_URL env: ${process.env.BACKEND_URL || 'not set'}`);
-  console.log(`   🔍 KOYEB_APP_URL env: ${process.env.KOYEB_APP_URL || 'not set'}`);  return {
+  console.log(`   🔍 KOYEB_APP_URL env: ${process.env.KOYEB_APP_URL || 'not set'}`);
+
+  return {
     port,
     tmdbApiKey,
     proxyUrl,
