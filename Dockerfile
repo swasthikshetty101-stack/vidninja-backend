@@ -1,5 +1,5 @@
 # Multi-stage build for optimized production deployment
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
 # Install pnpm
 RUN npm install -g pnpm
@@ -7,7 +7,7 @@ RUN npm install -g pnpm
 # Install dependencies only when needed
 FROM base AS deps
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat curl
 WORKDIR /app
 
 # Install dependencies based on pnpm
@@ -51,5 +51,5 @@ ENV PORT=3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3001/health || exit 1
 
-# Start the application
-CMD ["node", "dist/index.js"]
+# Start the application with additional Node.js flags for better compatibility
+CMD ["node", "--experimental-global-webcrypto", "--experimental-fetch", "dist/index.js"]
