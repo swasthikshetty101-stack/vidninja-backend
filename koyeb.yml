@@ -29,9 +29,11 @@ services:
       - name: PROXY_TIMEOUT
         value: "180000"  # 3 minutes for video streaming
       - name: TMDB_API_KEY
-        value: "9ea1aff13026f8babc7846fca3edfce7"  # Your TMDB key
+        value: "9ea1aff10da40e32f255578b6aabb9c3"  # Your TMDB key (matches .env)
       - name: PROXY_URL
         value: "https://75b009d6.simple-proxy-bypass.pages.dev"  # Your Cloudflare proxy
+      - name: BACKEND_URL
+        value: "https://important-candide-vidninja-84a3a384.koyeb.app"  # Backend URL for stream proxying
         
     # Instance configuration - optimized for video streaming
     instance:
