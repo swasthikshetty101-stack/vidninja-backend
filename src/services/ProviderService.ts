@@ -13,7 +13,7 @@ import {
   Stream,
   HlsBasedStream,
   FileBasedStream
-} from '../../../vidninja-provider/lib/index.js';
+} from 'vidninja-provider';
 import { Config } from '../config';
 
 export interface MediaInfo {
