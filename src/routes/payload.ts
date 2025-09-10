@@ -59,6 +59,102 @@ async function fetchStreamWithRetry(
 }
 
 /**
+ * Send heartbeat to extend token lifetime while video is playing
+ */
+export const sendHeartbeat = async (req: Request, res: Response) => {
+  try {
+    const { sessionKey, token } = req.body;
+
+    if (!sessionKey || !token) {
+      return res.status(400).json({
+        error: 'Missing sessionKey or token'
+      });
+    }
+
+    const success = authService.sendHeartbeat(sessionKey, token);
+
+    if (!success) {
+      return res.status(401).json({
+        error: 'Invalid session or token'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Heartbeat received, token lifetime extended'
+    });
+
+    console.log('💓 Heartbeat received - token lifetime extended');
+  } catch (error) {
+    console.error('❌ Failed to process heartbeat:', error);
+    res.status(500).json({
+      error: 'Failed to process heartbeat',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
+ * Invalidate specific token when player closes
+ */
+export const invalidateToken = async (req: Request, res: Response) => {
+  try {
+    const { sessionKey, token } = req.body;
+
+    if (!sessionKey || !token) {
+      return res.status(400).json({
+        error: 'Missing sessionKey or token'
+      });
+    }
+
+    const success = authService.invalidateToken(sessionKey, token);
+
+    res.json({
+      success: true,
+      message: 'Token invalidated successfully'
+    });
+
+    console.log('🚫 Token invalidated - player closed');
+  } catch (error) {
+    console.error('❌ Failed to invalidate token:', error);
+    res.status(500).json({
+      error: 'Failed to invalidate token',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
+ * Invalidate entire session when user closes all players
+ */
+export const invalidateSession = async (req: Request, res: Response) => {
+  try {
+    const { sessionKey } = req.body;
+
+    if (!sessionKey) {
+      return res.status(400).json({
+        error: 'Missing sessionKey'
+      });
+    }
+
+    const success = authService.invalidateSession(sessionKey);
+
+    res.json({
+      success: true,
+      message: 'Session invalidated successfully'
+    });
+
+    console.log('🚫 Session invalidated - all players closed');
+  } catch (error) {
+    console.error('❌ Failed to invalidate session:', error);
+    res.status(500).json({
+      error: 'Failed to invalidate session',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
  * Generate session key for secure stream access
  * Frontend calls this to get a session key
  */

@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { ProviderService } from '../services/ProviderService.js';
 import { TMDBService } from '../services/TMDBService.js';
-import { streamProxy, generateSessionKey, createSecureAccess } from './payload.js';
+import { streamProxy, generateSessionKey, createSecureAccess, sendHeartbeat, invalidateToken, invalidateSession } from './payload.js';
 
 export function createProviderRoutes(providerService: ProviderService, tmdbService: TMDBService): Router {
   const router = Router();
@@ -165,6 +165,9 @@ export function createProviderRoutes(providerService: ProviderService, tmdbServi
   // Authentication endpoints for secure stream access
   router.get('/auth/session', generateSessionKey);
   router.post('/auth/access', createSecureAccess);
+  router.post('/auth/heartbeat', sendHeartbeat);
+  router.post('/auth/invalidate-token', invalidateToken);
+  router.post('/auth/invalidate-session', invalidateSession);
 
   // Stream proxy endpoint - serves video streams through our backend
   // Now requires secure authentication token
