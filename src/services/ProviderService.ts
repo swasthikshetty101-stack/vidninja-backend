@@ -94,7 +94,9 @@ export class ProviderService {
       const payloadBase64 = btoa(payloadJson);
 
       // Return as stream proxy URL that Video.js can handle directly
-      const streamProxyUrl = `http://localhost:${this.config.port}/api/v1/stream?payload=${payloadBase64}`;
+      // Use the configured backend URL or fallback to localhost
+      const backendUrl = this.config.backendUrl || `http://localhost:${this.config.port}`;
+      const streamProxyUrl = `${backendUrl}/api/v1/stream?payload=${payloadBase64}`;
 
       console.log('🔒 Encoded stream URL to payload format');
       console.log('📦 Original URL hidden, stream proxy created');
@@ -147,7 +149,9 @@ export class ProviderService {
       console.log('🔄 Redirecting payload URL to our backend stream proxy');
 
       // Create a URL pointing to our backend's stream proxy
-      return `http://localhost:${this.config.port}/api/v1/stream?payload=${payload}`;
+      // Use the configured backend URL or fallback to localhost
+      const backendUrl = this.config.backendUrl || `http://localhost:${this.config.port}`;
+      return `${backendUrl}/api/v1/stream?payload=${payload}`;
     }
 
     // For direct URLs (like from Cloudnestra), encode them as payloads

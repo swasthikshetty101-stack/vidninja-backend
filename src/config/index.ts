@@ -1,6 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -15,6 +15,7 @@ export interface Config {
   proxyUrl?: string;
   enableCors: boolean;
   nodeEnv: string;
+  backendUrl?: string;
 }
 
 export function getConfig(): Config {
@@ -37,12 +38,17 @@ export function getConfig(): Config {
   const enableCors = process.env.ENABLE_CORS !== 'false';
   const nodeEnv = process.env.NODE_ENV || 'development';
 
+  // Backend URL for stream proxy URLs (auto-detect from environment)
+  const backendUrl = process.env.BACKEND_URL || process.env.KOYEB_APP_URL ||
+    (nodeEnv === 'production' ? 'https://important-candide-vidninja-84a3a384.koyeb.app' : undefined);
+
   console.log('🔧 Backend Configuration:');
   console.log(`   📋 Port: ${port}`);
   console.log(`   🔑 TMDB API Key: ${tmdbApiKey.substring(0, 8)}...`);
   console.log(`   🔗 Proxy URL: ${proxyUrl || 'None (direct requests)'}`);
   console.log(`   🌐 CORS: ${enableCors ? 'Enabled' : 'Disabled'}`);
   console.log(`   🔨 Environment: ${nodeEnv}`);
+  console.log(`   🏠 Backend URL: ${backendUrl || 'Auto-detect'}`);
 
   return {
     port,
@@ -50,5 +56,6 @@ export function getConfig(): Config {
     proxyUrl,
     enableCors,
     nodeEnv,
+    backendUrl,
   };
 }
