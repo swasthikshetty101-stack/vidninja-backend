@@ -159,10 +159,19 @@ console.log('🔍 Checking if file is run directly...');
 console.log('import.meta.url:', import.meta.url);
 console.log('process.argv[1]:', process.argv[1]);
 
-// Fix ES module detection for Windows paths
+// Fix ES module detection for both Windows and Linux paths
 const currentFileUrl = import.meta.url;
-const runFilePath = process.argv[1].replace(/\\/g, '/');
-const runFileUrl = `file:///${runFilePath}`;
+let runFileUrl: string;
+
+if (process.platform === 'win32') {
+  // Windows path normalization
+  const runFilePath = process.argv[1].replace(/\\/g, '/');
+  runFileUrl = `file:///${runFilePath}`;
+} else {
+  // Linux/Unix path - already correct format
+  runFileUrl = `file://${process.argv[1]}`;
+}
+
 console.log('normalized runFileUrl:', runFileUrl);
 
 if (currentFileUrl === runFileUrl) {
