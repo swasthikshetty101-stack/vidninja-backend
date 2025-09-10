@@ -4,6 +4,7 @@
   "description": "Backend API server for ProviderV Player",
   "type": "module",
   "main": "dist/index.js",
+  "packageManager": "pnpm@9.12.0",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
