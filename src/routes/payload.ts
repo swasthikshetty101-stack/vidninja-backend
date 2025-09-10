@@ -1,4 +1,8 @@
 import { Request, Response } from 'express';
+import { AuthService } from '../services/AuthService.js';
+
+// Initialize auth service
+const authService = new AuthService();
 
 /**
  * Fetch with retry logic for unreliable video servers
@@ -55,71 +59,89 @@ async function fetchStreamWithRetry(
 }
 
 /**
- * Decode payload endpoint - converts payload URLs back to direct stream URLs
- * This is used by the video player to get the actual stream URL from the encoded payload
+ * Generate session key for secure stream access
+ * Frontend calls this to get a session key
  */
-export const decodePayload = async (req: Request, res: Response) => {
+export const generateSessionKey = async (req: Request, res: Response) => {
   try {
-    const { payload } = req.query;
+    const sessionKey = authService.generateSessionKey();
 
-    if (!payload || typeof payload !== 'string') {
+    res.json({
+      success: true,
+      sessionKey,
+      expires: Date.now() + 5 * 60 * 1000 // 5 minutes
+    });
+
+    console.log('🔑 Generated session key for secure access');
+  } catch (error) {
+    console.error('❌ Failed to generate session key:', error);
+    res.status(500).json({
+      error: 'Failed to generate session key',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
+ * Create secure stream access token
+ * Frontend sends sessionKey + payload, backend returns secure token
+ */
+export const createSecureAccess = async (req: Request, res: Response) => {
+  try {
+    const { sessionKey, payload } = req.body;
+
+    if (!sessionKey || !payload) {
       return res.status(400).json({
-        error: 'Missing or invalid payload parameter'
+        error: 'Missing sessionKey or payload'
       });
     }
 
-    // Decode the base64 payload (handle both base64 and base64url encoding)
+    // Decode payload to get stream URL
     let decodedPayload: string;
     try {
-      // First try base64url decoding (which is what we actually use)
       decodedPayload = Buffer.from(payload, 'base64url').toString();
     } catch (error) {
       try {
-        // Fallback to regular base64 decoding
-        console.log('⚠️ base64url failed, trying regular base64...');
         decodedPayload = Buffer.from(payload, 'base64').toString();
       } catch (fallbackError) {
-        console.error('❌ Failed to decode payload with both base64url and base64:', error, fallbackError);
         return res.status(400).json({
-          error: 'Invalid payload encoding - unable to decode as base64url or base64'
+          error: 'Invalid payload encoding'
         });
       }
     }
 
     const payloadData = JSON.parse(decodedPayload);
 
-    console.log('🔓 Decoding payload for video player');
-    console.log('📦 Payload data:', {
-      type: payloadData.type,
-      hasUrl: !!payloadData.url,
-      hasHeaders: !!payloadData.headers,
-      timestamp: payloadData.timestamp
-    });
-
-    // Validate payload structure
     if (!payloadData.url) {
       return res.status(400).json({
         error: 'Invalid payload structure - missing URL'
       });
     }
 
-    // Return the decoded stream information
+    // Create secure access token
+    const secureAccess = authService.createSecureAccess(
+      sessionKey,
+      payloadData.url,
+      req.headers['user-agent']
+    );
+
+    if (!secureAccess) {
+      return res.status(401).json({
+        error: 'Invalid session key or access denied'
+      });
+    }
+
     res.json({
       success: true,
-      stream: {
-        url: payloadData.url,
-        type: payloadData.type || 'mp4',
-        headers: payloadData.headers || {},
-        options: payloadData.options || {}
-      }
+      token: secureAccess.token,
+      expires: secureAccess.expires
     });
 
-    console.log('✅ Payload decoded successfully');
-
+    console.log('🔐 Created secure access token');
   } catch (error) {
-    console.error('❌ Failed to decode payload:', error);
+    console.error('❌ Failed to create secure access:', error);
     res.status(500).json({
-      error: 'Failed to decode payload',
+      error: 'Failed to create secure access',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
@@ -127,11 +149,11 @@ export const decodePayload = async (req: Request, res: Response) => {
 
 /**
  * Stream proxy endpoint - serves the actual video stream through our backend
- * This allows Video.js to access the stream directly while hiding the source
+ * Now requires secure authentication token
  */
 export const streamProxy = async (req: Request, res: Response) => {
   try {
-    const { payload } = req.query;
+    const { payload, sessionKey, token } = req.query;
 
     if (!payload || typeof payload !== 'string') {
       return res.status(400).json({
@@ -139,7 +161,33 @@ export const streamProxy = async (req: Request, res: Response) => {
       });
     }
 
-    console.log('🎬 Proxying video stream through payload');
+    if (!sessionKey || typeof sessionKey !== 'string') {
+      return res.status(401).json({
+        error: 'Missing session key - secure access required'
+      });
+    }
+
+    if (!token || typeof token !== 'string') {
+      return res.status(401).json({
+        error: 'Missing access token - secure access required'
+      });
+    }
+
+    // Validate secure access
+    const isValidAccess = authService.validateStreamAccess(
+      sessionKey,
+      token,
+      req.headers['user-agent']
+    );
+
+    if (!isValidAccess) {
+      console.log('❌ Invalid or expired secure access token');
+      return res.status(403).json({
+        error: 'Access denied - invalid or expired token'
+      });
+    }
+
+    console.log('🎬 Authorized stream access - proxying video stream');
     console.log('📦 Raw payload:', payload.substring(0, 100) + '...');
 
     // Decode the base64 payload (handle both base64 and base64url encoding)

@@ -32,7 +32,7 @@
    CORS_ORIGIN=*
    PROXY_TIMEOUT=180000
    TMDB_API_KEY=9ea1aff13026f8babc7846fca3edfce7
-   PROXY_URL=https://75b009d6.simple-proxy-bypass.pages.dev
+   PROXY_URL=https://proxy.vidninja.pro
    ```
 
 ### Option 2: Docker Deployment

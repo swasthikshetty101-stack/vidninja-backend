@@ -31,7 +31,7 @@ services:
       - name: TMDB_API_KEY
         value: "9ea1aff10da40e32f255578b6aabb9c3"  # Your TMDB key (matches .env)
       - name: PROXY_URL
-        value: "https://75b009d6.simple-proxy-bypass.pages.dev"  # Your Cloudflare proxy
+        value: "https://proxy.vidninja.pro"  # Your Cloudflare proxy
       - name: BACKEND_URL
         value: "https://cdn.vidninja.pro"  # Backend URL for stream proxying
         
