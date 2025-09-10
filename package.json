@@ -11,15 +11,16 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "express": "^5.1.0",
+    "cheerio": "^1.1.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0"
   },
   "devDependencies": {
-    "@types/express": "^5.0.3",
     "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
     "@types/node": "^22.8.6",
-    "typescript": "^5.2.2",
-    "tsx": "^4.19.1"
+    "tsx": "^4.19.1",
+    "typescript": "^5.2.2"
   }
 }
