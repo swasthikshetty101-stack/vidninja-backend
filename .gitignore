@@ -16,6 +16,7 @@ pnpm-debug.log*
 dist/
 build/
 out/
+# Note: lib/ contains bundled provider code and should be committed
 
 # IDE files
 .vscode/
