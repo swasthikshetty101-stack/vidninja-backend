@@ -299,7 +299,11 @@ export const streamProxy = async (req: Request, res: Response) => {
       'https://cdn.vidninja.pro',
       'https://vidninja.pro',
       'http://localhost:3001',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'http://localhost:5173', // Vite dev server
+      'http://localhost:4173', // Vite preview server
+      'http://127.0.0.1:5173', // Alternative localhost
+      'http://127.0.0.1:3001'  // Alternative localhost
     ];
 
     const refererString = Array.isArray(referer) ? referer[0] : referer;
