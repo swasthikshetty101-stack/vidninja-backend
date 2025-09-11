@@ -8,6 +8,9 @@ interface SessionToken {
     isActive: boolean;
     lastHeartbeat: number;
     payload: string;
+    clientIP?: string; // Track client IP for additional security
+    userAgent?: string; // Track user agent
+    createdAt: number; // Track creation time
 }
 
 interface SecureStreamAccess {
@@ -72,7 +75,10 @@ export class AuthService {
                 playerSessionId,
                 isActive: true, // Set as active immediately
                 lastHeartbeat: Date.now(),
-                payload: streamUrl
+                payload: streamUrl,
+                clientIP: undefined, // Will be set during validation
+                userAgent,
+                createdAt: Date.now()
             });
 
             session.lastActivity = Date.now();
@@ -90,9 +96,9 @@ export class AuthService {
     }
 
     /**
-     * Validate access token for stream request - NO EXPIRATION FOR ACTIVE SESSIONS
+     * Validate access token for stream request - with IP binding for security
      */
-    validateStreamAccess(sessionKey: string, token: string, userAgent?: string): boolean {
+    validateStreamAccess(sessionKey: string, token: string, userAgent?: string, clientIP?: string): boolean {
         try {
             const session = this.sessions.get(sessionKey);
             if (!session) {
@@ -101,6 +107,23 @@ export class AuthService {
 
             const tokenData = session.tokens.get(token);
             if (!tokenData) {
+                return false;
+            }
+
+            // Bind IP on first use for security
+            if (!tokenData.clientIP && clientIP) {
+                tokenData.clientIP = clientIP;
+            }
+
+            // Validate IP binding - token can only be used from the same IP
+            if (tokenData.clientIP && clientIP && tokenData.clientIP !== clientIP) {
+                console.log(`🚫 IP mismatch: token bound to ${tokenData.clientIP}, request from ${clientIP}`);
+                return false;
+            }
+
+            // Validate user agent consistency
+            if (tokenData.userAgent && userAgent && tokenData.userAgent !== userAgent) {
+                console.log(`🚫 User agent mismatch detected`);
                 return false;
             }
 

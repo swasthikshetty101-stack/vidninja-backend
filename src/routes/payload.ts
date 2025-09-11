@@ -245,12 +245,18 @@ export const createSecureAccess = async (req: Request, res: Response) => {
 
 /**
  * Stream proxy endpoint - serves the actual video stream through our backend
- * Now requires secure authentication token
+ * Now requires secure authentication token + anti-scraping protection
  */
 export const streamProxy = async (req: Request, res: Response) => {
   try {
     const { payload, sessionKey, token } = req.query;
 
+    // Enhanced Security Checks
+    const clientIP = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'];
+    const userAgent = req.headers['user-agent'] || '';
+    const referer = req.headers['referer'] || req.headers['referrer'] || '';
+
+    // 1. Basic parameter validation
     if (!payload || typeof payload !== 'string') {
       return res.status(400).json({
         error: 'Missing or invalid payload parameter'
@@ -269,11 +275,64 @@ export const streamProxy = async (req: Request, res: Response) => {
       });
     }
 
-    // Validate secure access
+    // 2. Anti-scraping: Block common scraping tools and suspicious user agents
+    const suspiciousUserAgents = [
+      'curl', 'wget', 'HTTPie', 'python-requests', 'Go-http-client',
+      'PostmanRuntime', 'Insomnia', 'node-fetch', 'axios', 'Scrapy',
+      'crawler', 'bot', 'spider', 'scraper', 'downloader',
+      'youtube-dl', 'yt-dlp', 'ffmpeg', 'vlc', 'mplayer'
+    ];
+
+    const isSuspiciousUA = suspiciousUserAgents.some(ua =>
+      userAgent.toLowerCase().includes(ua.toLowerCase())
+    );
+
+    if (isSuspiciousUA) {
+      console.log(`🚫 Blocked suspicious user agent: ${userAgent}`);
+      return res.status(403).json({
+        error: 'Access denied - unauthorized client'
+      });
+    }
+
+    // 3. Referer validation: Only allow requests from your domain or direct access from browsers
+    const allowedReferers = [
+      'https://cdn.vidninja.pro',
+      'https://vidninja.pro',
+      'http://localhost:3001',
+      'http://localhost:3000'
+    ];
+
+    const refererString = Array.isArray(referer) ? referer[0] : referer;
+    const isValidReferer = !refererString || // Direct browser access is OK
+      allowedReferers.some(allowed => refererString.startsWith(allowed));
+
+    if (!isValidReferer) {
+      console.log(`🚫 Blocked invalid referer: ${refererString}`);
+      return res.status(403).json({
+        error: 'Access denied - invalid referer'
+      });
+    }
+
+    // 4. Must have a browser-like user agent
+    const hasBrowserUA = userAgent.includes('Mozilla') ||
+      userAgent.includes('Chrome') ||
+      userAgent.includes('Safari') ||
+      userAgent.includes('Firefox') ||
+      userAgent.includes('Edge');
+
+    if (!hasBrowserUA) {
+      console.log(`🚫 Blocked non-browser user agent: ${userAgent}`);
+      return res.status(403).json({
+        error: 'Access denied - browser required'
+      });
+    }
+
+    // 5. Validate secure access with enhanced checks
     const isValidAccess = authService.validateStreamAccess(
       sessionKey,
       token,
-      req.headers['user-agent']
+      userAgent,
+      clientIP as string
     );
 
     if (!isValidAccess) {
