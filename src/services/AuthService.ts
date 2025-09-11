@@ -4,7 +4,6 @@ interface SessionToken {
     key: string;
     token: string;
     expires: number;
-    used: boolean;
     playerSessionId: string;
     isActive: boolean;
     lastHeartbeat: number;
@@ -27,12 +26,12 @@ interface PlayerSession {
 
 export class AuthService {
     private sessions = new Map<string, PlayerSession>();
-    private readonly TOKEN_EXPIRY = 30 * 60 * 1000; // 30 minutes initial
+    private readonly TOKEN_EXPIRY = 60 * 60 * 1000; // 1 hour for active sessions
     private readonly SECRET_KEY = process.env.AUTH_SECRET || 'vidninja-secret-2024';
 
     constructor() {
-        // Clean expired sessions every minute
-        setInterval(() => this.cleanExpiredSessions(), 60000);
+        // Clean expired sessions every 10 minutes (less frequent)
+        setInterval(() => this.cleanExpiredSessions(), 10 * 60 * 1000);
     }
 
     /**
@@ -44,23 +43,17 @@ export class AuthService {
 
     /**
      * Create a secure access token for a stream URL
-     * Frontend sends sessionKey, backend returns token if valid
      */
     createSecureAccess(sessionKey: string, streamUrl: string, userAgent?: string): SecureStreamAccess | null {
         try {
-            // Validate session key format
             if (!sessionKey || sessionKey.length !== 64) {
                 return null;
             }
 
-            // Generate a unique player session ID
             const playerSessionId = crypto.randomBytes(16).toString('hex');
-
-            // Generate a time-limited token
             const token = this.generateSecureToken(sessionKey, streamUrl, userAgent);
             const expires = Date.now() + this.TOKEN_EXPIRY;
 
-            // Get or create player session
             let session = this.sessions.get(sessionKey);
             if (!session) {
                 session = {
@@ -72,14 +65,12 @@ export class AuthService {
                 this.sessions.set(sessionKey, session);
             }
 
-            // Store token in session
             session.tokens.set(token, {
                 key: sessionKey,
                 token,
                 expires,
-                used: false,
                 playerSessionId,
-                isActive: false,
+                isActive: true, // Set as active immediately
                 lastHeartbeat: Date.now(),
                 payload: streamUrl
             });
@@ -99,43 +90,27 @@ export class AuthService {
     }
 
     /**
-     * Validate access token for stream request
+     * Validate access token for stream request - NO EXPIRATION FOR ACTIVE SESSIONS
      */
     validateStreamAccess(sessionKey: string, token: string, userAgent?: string): boolean {
         try {
             const session = this.sessions.get(sessionKey);
-
             if (!session) {
                 return false;
             }
 
-            // Get the specific token
             const tokenData = session.tokens.get(token);
             if (!tokenData) {
                 return false;
             }
 
-            // Check if expired
-            if (Date.now() > tokenData.expires) {
-                session.tokens.delete(token);
-                return false;
-            }
-
-            // Check if already used (one-time use for security)
-            if (tokenData.used) {
-                return false;
-            }
-
-            // Validate token
-            if (tokenData.token !== token) {
-                return false;
-            }
-
-            // Mark as used and active
-            tokenData.used = true;
+            // Update activity - NO EXPIRATION CHECK FOR ACTIVE TOKENS
             tokenData.isActive = true;
             tokenData.lastHeartbeat = Date.now();
             session.lastActivity = Date.now();
+
+            // Keep extending expiry for active sessions
+            tokenData.expires = Date.now() + this.TOKEN_EXPIRY;
 
             return true;
         } catch (error) {
@@ -166,13 +141,10 @@ export class AuthService {
             if (!session) return false;
 
             const tokenData = session.tokens.get(token);
-            if (!tokenData || !tokenData.isActive) return false;
+            if (!tokenData) return false;
 
-            // Update heartbeat
             tokenData.lastHeartbeat = Date.now();
             session.lastActivity = Date.now();
-
-            // Extend token expiry while active
             tokenData.expires = Date.now() + this.TOKEN_EXPIRY;
 
             return true;
@@ -183,21 +155,13 @@ export class AuthService {
     }
 
     /**
-     * Invalidate specific token (when player closes)
+     * Invalidate specific token
      */
     invalidateToken(sessionKey: string, token: string): boolean {
         try {
             const session = this.sessions.get(sessionKey);
             if (!session) return false;
 
-            const tokenData = session.tokens.get(token);
-            if (!tokenData) return false;
-
-            // Mark as inactive and used
-            tokenData.isActive = false;
-            tokenData.used = true;
-
-            // Remove from session
             session.tokens.delete(token);
             session.lastActivity = Date.now();
 
@@ -209,26 +173,12 @@ export class AuthService {
     }
 
     /**
-     * Invalidate entire session (when user closes all players)
+     * Invalidate entire session
      */
     invalidateSession(sessionKey: string): boolean {
         try {
-            const session = this.sessions.get(sessionKey);
-            if (!session) return false;
-
-            // Mark all tokens as inactive
-            for (const tokenData of session.tokens.values()) {
-                tokenData.isActive = false;
-                tokenData.used = true;
-            }
-
-            // Clear all tokens
-            session.tokens.clear();
-
-            // Remove session
-            this.sessions.delete(sessionKey);
-
-            return true;
+            const deleted = this.sessions.delete(sessionKey);
+            return deleted;
         } catch (error) {
             console.error('Failed to invalidate session:', error);
             return false;
@@ -236,7 +186,7 @@ export class AuthService {
     }
 
     /**
-     * Clean expired sessions and tokens
+     * Clean expired sessions - VERY CONSERVATIVE
      */
     private cleanExpiredSessions(): void {
         const now = Date.now();
@@ -244,17 +194,16 @@ export class AuthService {
         let cleanedTokens = 0;
 
         for (const [sessionKey, session] of this.sessions.entries()) {
-            // Clean expired tokens within session
+            // Only clean tokens that haven't been active for 30+ minutes
             for (const [tokenKey, tokenData] of session.tokens.entries()) {
-                if (now > tokenData.expires ||
-                    (!tokenData.isActive && now - tokenData.lastHeartbeat > 30000)) { // 30s grace for inactive
+                if (now - tokenData.lastHeartbeat > 30 * 60 * 1000) {
                     session.tokens.delete(tokenKey);
                     cleanedTokens++;
                 }
             }
 
-            // Clean empty sessions or sessions with no activity for 1 hour
-            if (session.tokens.size === 0 || now - session.lastActivity > 60 * 60 * 1000) {
+            // Only clean sessions with no tokens and no activity for 2+ hours
+            if (session.tokens.size === 0 && now - session.lastActivity > 2 * 60 * 60 * 1000) {
                 this.sessions.delete(sessionKey);
                 cleanedSessions++;
             }
